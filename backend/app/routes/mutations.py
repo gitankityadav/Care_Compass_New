@@ -833,3 +833,38 @@ def decide_nurse_leave_request(request_id: str, request: Request, body: dict[str
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail={"error": "Could not record leave decision", "reason": str(exc)})
+
+
+@router.get("/iot/config")
+def get_iot_configuration():
+    """Return live nurse/patient assignments for the bedside device simulator."""
+    try:
+        with get_db_pool().connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute("""
+                    SELECT DISTINCT n.nurse_id, n.full_name
+                    FROM public.nurses n
+                    JOIN public.nurse_patient_assignment a ON a.nurse_id = n.nurse_id
+                    WHERE a.active_status = TRUE
+                    ORDER BY n.full_name
+                """)
+                nurses = cursor.fetchall()
+                cursor.execute("""
+                    SELECT a.nurse_id, p.patient_id, p.first_name, p.last_name,
+                           p.hospital_id, te.therapy_episode_id
+                    FROM public.nurse_patient_assignment a
+                    JOIN public.patients p ON p.patient_id = a.patient_id
+                    LEFT JOIN LATERAL (
+                        SELECT therapy_episode_id
+                        FROM public.therapy_episodes
+                        WHERE patient_id = p.patient_id
+                        ORDER BY therapy_episode_id
+                        LIMIT 1
+                    ) te ON TRUE
+                    WHERE a.active_status = TRUE
+                    ORDER BY a.nurse_id, p.last_name, p.first_name
+                """)
+                assignments = cursor.fetchall()
+        return {"nurses": nurses, "assignments": assignments}
+    except Exception:
+        raise HTTPException(status_code=500, detail={"error": "Unable to load live IoT nurse and patient assignments"})
