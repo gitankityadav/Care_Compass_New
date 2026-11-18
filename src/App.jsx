@@ -853,63 +853,6 @@ function App(){
               {!visible.length&&<div className="empty">No records match your search.</div>}
             </div>
           </div>
-          <section className="panel reveal" style={{marginTop:22}}>
-            <div className="panel-head"><div><h2><Activity/> Connected operations workbench</h2><p>Related source datasets available for this module. Preview rows are shown; full records require database import.</p></div><span className="tag green">32-SHEET SOURCE</span></div>
-            <div className="telemetry-grid">
-              {(tab==='patients'?[
-                ['Therapy episodes',data.operations.therapyEpisodes,'therapy_episode_id'],
-                ['Therapy sessions',data.operations.therapySessions,'therapy_session_id'],
-                ['Nurse assignments',data.operations.nurseAssignments,'assignment_id'],
-                ['Patient supply plans',data.operations.supplyPlans,'supply_plan_id'],
-                ['Interventions',data.operations.interventions,'intervention_id'],
-                ['Risk register',data.operations.riskRegister,'risk_id']
-              ]:tab==='logistics'?[
-                ['Distribution centres',data.operations.distributionCenters,'distribution_center_id'],
-                ['Inventory records',data.operations.inventory,'inventory_id'],
-                ['Suppliers',data.operations.suppliers,'supplier_id'],
-                ['Patient allocations',data.operations.shipmentAllocations,'allocation_id'],
-                ['Shipment events',data.operations.shipmentEvents,'shipment_event_id'],
-                ['Patient supply plans',data.operations.supplyPlans,'supply_plan_id']
-              ]:tab==='ops'?[
-                ['Device alarms',data.operations.alarms,'alarm_id'],
-                ['Service tickets',data.operations.serviceTickets,'ticket_id'],
-                ['Work orders',data.operations.workOrders,'work_order_id'],
-                ['Device-patient links',data.operations.deviceAssignments,'assignment_id'],
-                ['Recall cases',data.operations.recalls,'recall_id'],
-                ['Firmware executions',data.operations.firmwareExecution,'execution_id']
-              ]:tab==='staff'?[
-                ['Supply Chain Activity',[
-                  ...data.operations.shipmentEvents,
-                  ...data.operations.inventory,
-                  ...data.operations.distributionCenters,
-                  ...data.operations.suppliers,
-                  ...data.operations.shipmentAllocations
-                ]],
-                ['Device & Equipment Monitoring',[
-                  ...data.operations.alarms,
-                  ...data.operations.serviceTickets,
-                  ...data.operations.workOrders,
-                  ...data.operations.recalls,
-                  ...data.operations.firmwareCampaigns,
-                  ...data.operations.firmwareExecution
-                ]],
-                ['Clinical Interventions',[
-                  ...data.operations.therapyEpisodes,
-                  ...data.operations.therapySessions,
-                  ...data.operations.interventions,
-                  ...data.operations.riskRegister,
-                  ...data.operations.nurseAssignments
-                ]]
-              ]:[
-                ['Risk register',data.operations.riskRegister,'risk_id'],
-                ['Interventions',data.operations.interventions,'intervention_id'],
-                ['Shipment events',data.operations.shipmentEvents,'shipment_event_id'],
-                ['Device alarms',data.operations.alarms,'alarm_id'],
-                ['Service tickets',data.operations.serviceTickets,'ticket_id'],
-                ['Work orders',data.operations.workOrders,'work_order_id']
-              ]).map(([label,items,idKey])=><div className="telemetry-card" key={label}><div>{label}<span><Activity size={15}/></span></div><strong><CountUp value={items?.length||0}/></strong><small>Preview records available</small>{items?.slice(0,3).map((item,i)=><small key={i} style={{display:'block',marginTop:5}}>{item[idKey]||Object.values(item)[0]||'Source record'}</small>)}</div>)}
-            </div>
-          </section>
         </>}
 
       {weatherPortalOpen&&<div className="urgent-drawer-scrim" style={{zIndex:1200}} onClick={()=>setWeatherPortalOpen(false)}>
