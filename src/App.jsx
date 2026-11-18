@@ -60,11 +60,29 @@ async function loadDatabase(){
 
 
 function IoTDevicePage(){
-  const [nurseId,setNurseId]=useState('NUR00017');
-  const assigned=workbook.nurse_patient_assignment.filter(a=>a.nurse_id===nurseId&&a.active_status);
-  const assignedPatients=assigned.map(a=>workbook.patients.find(p=>p.patient_id===a.patient_id)).filter(Boolean);
-  const [patientId,setPatientId]=useState(assignedPatients[0]?.patient_id||'PAT000004');
-  useEffect(()=>{setPatientId(assignedPatients[0]?.patient_id||'')},[nurseId]);
+  const [nurseId,setNurseId]=useState('');
+  const [liveNurses,setLiveNurses]=useState([]);
+  const [liveAssignments,setLiveAssignments]=useState([]);
+  const [configLoading,setConfigLoading]=useState(true);
+  const [configError,setConfigError]=useState('');
+  const [patientId,setPatientId]=useState('');
+  const assignedPatients=liveAssignments.filter(a=>a.nurse_id===nurseId);
+  useEffect(()=>{
+    let live=true;
+    fetch(`${API_BASE}/api/iot/config`).then(async r=>{
+      const j=await r.json();
+      if(!r.ok)throw new Error(j.detail?.error||'Could not load live assignments');
+      if(!live)return;
+      const nurses=j.nurses||[], assignments=j.assignments||[];
+      setLiveNurses(nurses);setLiveAssignments(assignments);
+      const preferred=nurses.some(n=>n.nurse_id==='NUR00017')?'NUR00017':(nurses[0]?.nurse_id||'');
+      setNurseId(preferred);
+      setPatientId(assignments.find(a=>a.nurse_id===preferred)?.patient_id||'');
+      setConfigError('');
+    }).catch(e=>{if(live)setConfigError(e.message)}).finally(()=>{if(live)setConfigLoading(false)});
+    return()=>{live=false};
+  },[]);
+  useEffect(()=>{if(!assignedPatients.some(p=>p.patient_id===patientId))setPatientId(assignedPatients[0]?.patient_id||'')},[nurseId,liveAssignments]);
   const [severity,setSeverity]=useState('Critical');
   const [eventType,setEventType]=useState('Abnormal heart-rate threshold');
   const [observation,setObservation]=useState('Heart rate has exceeded the configured safety threshold. Immediate nurse assessment requested.');
@@ -159,11 +177,11 @@ function IoTDevicePage(){
     if(!patient)return;
     setSending(true);
     try{
-      const therapy=workbook.therapy_episodes.find(t=>t.patient_id===patient.patient_id);
+      const therapy=patient.therapy_episode_id;
       const res=await fetch(API_BASE+'/api/iot/trigger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
         patient_id:patient.patient_id,hospital_id:patient.hospital_id,assigned_nurse_id:nurseId,
         risk_type:eventType,severity,device_id:'CC-IOT-ICU-014',device_name:'Bedside Patient Monitor CC-IOT-ICU-014',
-        observation,therapy_episode_id:therapy?.therapy_episode_id||null,event_datetime_utc:new Date().toISOString()
+        observation,therapy_episode_id:therapy||null,event_datetime_utc:new Date().toISOString()
       })});
       const result=await res.json();
       if(!res.ok)throw new Error(result.detail?.error||result.error||'The central command center rejected the event');
@@ -197,9 +215,12 @@ function IoTDevicePage(){
         <section className="iot-event-config panel">
           <div className="iot-section-label">EVENT CONFIGURATION</div>
           <h2>Patient & telemetry</h2>
-          <label>Assigned nurse</label><select value={nurseId} onChange={e=>setNurseId(e.target.value)}>{['NUR00017','NUR00002','NUR00003'].map(id=>{const n=workbook.nurses.find(x=>x.nurse_id===id);return <option key={id} value={id}>{n?.full_name||id} · {id}</option>})}</select>
+          <label>Assigned nurse</label><select value={nurseId} onChange={e=>setNurseId(e.target.value)} disabled={configLoading||!liveNurses.length}>{liveNurses.map(n=><option key={n.nurse_id} value={n.nurse_id}>{n.full_name} · {n.nurse_id}</option>)}</select>
           <label>Patient connected to this monitor</label>
-          <select value={patientId} onChange={e=>setPatientId(e.target.value)}>{assignedPatients.map(p=><option key={p.patient_id} value={p.patient_id}>{p.first_name} {p.last_name} · {p.patient_id}</option>)}</select>
+          <select value={patientId} onChange={e=>setPatientId(e.target.value)} disabled={configLoading||!assignedPatients.length}>{assignedPatients.map(p=><option key={p.patient_id} value={p.patient_id}>{p.first_name} {p.last_name} · {p.patient_id}</option>)}</select>
+          {configLoading&&<small>Loading live PostgreSQL nurse assignments…</small>}
+          {configError&&<p className="iot-voice-warning">{configError}</p>}
+          {!configLoading&&!configError&&!assignedPatients.length&&<p className="iot-voice-warning">No active patient assignments are available for this nurse.</p>}
           <label>Device event</label><select value={eventType} onChange={e=>setEventType(e.target.value)}><option>Abnormal heart-rate threshold</option><option>Oxygen saturation below threshold</option><option>Blood pressure outside configured range</option><option>Patient deterioration detected</option><option>Missed critical observation</option></select>
           <label>Alert severity</label><select value={severity} onChange={e=>setSeverity(e.target.value)}><option>Critical</option><option>High</option></select>
           <label>Telemetry payload / observation</label><textarea rows="4" value={observation} onChange={e=>setObservation(e.target.value)}/>
