@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190"><defs><linearGradient id="tcs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffca28"/><stop offset=".35" stop-color="#ef3340"/><stop offset=".68" stop-color="#c2188b"/><stop offset="1" stop-color="#6c2bd9"/></linearGradient></defs><rect width="720" height="190" rx="16" fill="#fff"/><text x="10" y="142" font-family="Arial,sans-serif" font-size="156" font-weight="700" font-style="italic" letter-spacing="-13" fill="url(#tcs)">TCS</text><text x="340" y="76" font-family="Arial,sans-serif" font-size="42" font-weight="800" fill="#0875a9">TATA</text><text x="340" y="120" font-family="Arial,sans-serif" font-size="35" font-weight="700" fill="#0875a9">CONSULTANCY</text><text x="340" y="160" font-family="Arial,sans-serif" font-size="35" font-weight="700" fill="#0875a9">SERVICES</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190" role="img" aria-labelledby="title">
+  <title id="title">Tata Consultancy Services</title>
+  <rect width="720" height="190" rx="14" fill="#ffffff"/>
+  <g fill="#0875a9" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle">
+    <text x="360" y="66" font-size="48" letter-spacing="2">TATA</text>
+    <text x="360" y="119" font-size="43" letter-spacing="1">CONSULTANCY</text>
+    <text x="360" y="165" font-size="43" letter-spacing="2">SERVICES</text>
+  </g>
+</svg>
