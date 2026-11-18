@@ -47,7 +47,7 @@ export default function Login({onEnter}){
     <div className="login-stage" onPointerMove={tilt} onPointerLeave={reset}>
       <form className="login-card" ref={card} onSubmit={submit}>
         <div className="login-glare"/>
-        <img className="login-company-logo" src="/tcs-logo.svg" alt="Tata Consultancy Services"/>
+        <img className="login-company-logo" src="https://www.tcs.com/content/dam/global-tcs/en/images/who-we-are/media-kit/TCS-logo-black-CMYK.svg" alt="Tata Consultancy Services"/>
         <div className="eyebrow">TATA CONSULTANCY SERVICES · HEALTHCARE GIS COMMAND CENTER</div>
         <h1><span className="grad-text">Care Compass</span></h1>
         <EcgLine className="login-ecg"/>
