@@ -8,7 +8,7 @@ import Login from './components/Login'
 import workbook from './data/workbook-sample.json'
 import './styles/app.css'
 
-const modules=[['twin','Leadership Dashboard',Activity],['patients','Patient Command',Users],['staff','Nurse Mobility',Stethoscope],['leave','Leave & Coverage',CalendarDays],['logistics','Logistics Tower',Truck],['automation','Automation Center',RefreshCw],['ops','Service Ops',Wrench],['resilience','Resilience Center',ShieldCheck],['trigger','IoT Device Simulator',Cpu]]
+const modules=[['twin','Leadership Dashboard',Activity],['patients','Patient Command Center',Users],['staff','Nurse Mobility',Stethoscope],['leave','Leave & Coverage',CalendarDays],['logistics','Logistics Tower',Truck],['automation','Automation Center',RefreshCw],['ops','Service Ops',Wrench],['resilience','Resilience Center',ShieldCheck],['trigger','IoT Device Simulator',Cpu]]
 const shortLabel={twin:'Twin',patients:'Patients',staff:'Nurse Mobility',leave:'Leave',logistics:'Logistics',automation:'Automation',ops:'Ops',resilience:'Resilience',trigger:'IoT Device'}
 const hospitalById=Object.fromEntries(workbook.hospitals.map(h=>[h.hospital_id,h]))
 const nurseById=Object.fromEntries(workbook.nurses.map(n=>[n.nurse_id,n]))
@@ -878,10 +878,28 @@ function App(){
                 ['Recall cases',data.operations.recalls,'recall_id'],
                 ['Firmware executions',data.operations.firmwareExecution,'execution_id']
               ]:tab==='staff'?[
-                ['Nurse assignments',data.operations.nurseAssignments,'assignment_id'],
-                ['Therapy sessions',data.operations.therapySessions,'therapy_session_id'],
-                ['Therapy episodes',data.operations.therapyEpisodes,'therapy_episode_id'],
-                ['Interventions',data.operations.interventions,'intervention_id']
+                ['Supply Chain Activity',[
+                  ...data.operations.shipmentEvents,
+                  ...data.operations.inventory,
+                  ...data.operations.distributionCenters,
+                  ...data.operations.suppliers,
+                  ...data.operations.shipmentAllocations
+                ]],
+                ['Device & Equipment Monitoring',[
+                  ...data.operations.alarms,
+                  ...data.operations.serviceTickets,
+                  ...data.operations.workOrders,
+                  ...data.operations.recalls,
+                  ...data.operations.firmwareCampaigns,
+                  ...data.operations.firmwareExecution
+                ]],
+                ['Clinical Interventions',[
+                  ...data.operations.therapyEpisodes,
+                  ...data.operations.therapySessions,
+                  ...data.operations.interventions,
+                  ...data.operations.riskRegister,
+                  ...data.operations.nurseAssignments
+                ]]
               ]:[
                 ['Risk register',data.operations.riskRegister,'risk_id'],
                 ['Interventions',data.operations.interventions,'intervention_id'],
