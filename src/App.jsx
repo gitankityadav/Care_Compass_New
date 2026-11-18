@@ -95,6 +95,7 @@ function IoTDevicePage(){
   const [voiceTranscript,setVoiceTranscript]=useState('');
   const [voiceState,setVoiceState]=useState('idle');
   const [messageStatus,setMessageStatus]=useState('');
+  const [triggerStatus,setTriggerStatus]=useState('');
   const recognitionRef=useRef(null);
   const finalTranscriptRef=useRef('');
   const voiceStateRef=useRef('idle');
@@ -104,6 +105,22 @@ function IoTDevicePage(){
     const load=async()=>{try{const r=await fetch(`${API_BASE}/api/device/messages?patient_id=${encodeURIComponent(patientId)}`);if(r.ok){const j=await r.json();const latest=(j.rows||[])[0];if(live)setMessageStatus(latest?.message_status||'')}}catch{}};
     load();const t=setInterval(load,2500);return()=>{live=false;clearInterval(t)};
   },[patientId]);
+  useEffect(()=>{
+    if(!lastEvent?.interventionId)return;
+    let live=true;
+    const refreshTriggerStatus=async()=>{
+      try{
+        const r=await fetch(`${API_BASE}/api/data/intervention_cases?limit=50000`);
+        if(!r.ok)return;
+        const j=await r.json();
+        const row=(j.rows||[]).find(x=>x.intervention_id===lastEvent.interventionId);
+        if(live&&row)setTriggerStatus(row.status||'Assigned');
+      }catch{}
+    };
+    refreshTriggerStatus();
+    const timer=setInterval(refreshTriggerStatus,2500);
+    return()=>{live=false;clearInterval(timer)};
+  },[lastEvent?.interventionId]);
   const startVoice=()=>{
     const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!Speech){setVoice('unsupported');return}
@@ -188,6 +205,7 @@ function IoTDevicePage(){
       const result=await res.json();
       if(!res.ok)throw new Error(result.detail?.error||result.error||'The central command center rejected the event');
       setLastEvent({eventId:result.event_id,riskId:result.risk.risk_id,interventionId:result.intervention?.intervention_id,patient:patient.first_name+' '+patient.last_name,at:new Date().toLocaleTimeString(),deduplicated:!!result.deduplicated});
+      setTriggerStatus(result.intervention?.status||'Assigned');
     }catch(e){setApiMessage('Transmission failed: '+e.message);setApiState('offline');}
     finally{setSending(false);}
   };
@@ -203,7 +221,7 @@ function IoTDevicePage(){
       <p className="iot-intro">This patient-facing simulator lets a patient request urgent nurse assistance. It records the alert through Care Compass; it is a demonstration and is not connected to a physical bedside device or emergency service.</p>
       <div className="iot-device-layout">
         <section className="iot-device-visual panel">
-          <div className="iot-device-top"><span className={'iot-led '+(messageStatus==='Acknowledged'?'acknowledged':'')}/><b>{messageStatus==='Acknowledged'?'NURSE ACKNOWLEDGED':'DEVICE ONLINE'}</b><small>CC-IOT-ICU-014</small></div>
+          <div className="iot-device-top"><span className={'iot-led '+((triggerStatus==='Acknowledged'||triggerStatus==='In Progress'||messageStatus==='Acknowledged')?'acknowledged':'')}/><b>{triggerStatus==='Acknowledged'||triggerStatus==='In Progress'||messageStatus==='Acknowledged'?'NURSE ACKNOWLEDGED':'DEVICE ONLINE'}</b><small>CC-IOT-ICU-014</small></div>
           <img src="/iot-emergency-button.svg" alt="Hand pressing the red bedside emergency alert button"/>
           <div className="iot-device-caption"><b>BEDSIDЕ PATIENT MONITOR</b><span>Signal: Connected · Channel: Clinical Safety</span></div>
           <button className="iot-red-trigger" onClick={send} disabled={apiState!=='connected'||sending||!patientId}>
@@ -252,7 +270,7 @@ function IoTDevicePage(){
         <textarea className="iot-voice-transcript" rows="3" value={voiceTranscript} onChange={e=>setVoiceTranscript(e.target.value)} placeholder="Your spoken words will appear here…"/>
         <button className="primary" disabled={!voiceTranscript.trim()||voiceState==='sending'} onClick={sendVoiceMessage}>{voiceState==='sending'?'SENDING…':'SEND MESSAGE TO NURSE'}</button>
         {voiceState==='sent'&&<div className="iot-message-sent">Message sent. The bedside indicator turns purple when the nurse acknowledges it.</div>}
-        <div className={'iot-ack-indicator '+(messageStatus==='Acknowledged'?'acknowledged':'pending')}><i/>{messageStatus==='Acknowledged'?'NURSE ACKNOWLEDGED — PURPLE INDICATOR':'WAITING FOR NURSE ACKNOWLEDGEMENT'}</div>
+        <div className={'iot-ack-indicator '+((triggerStatus==='Acknowledged'||triggerStatus==='In Progress'||messageStatus==='Acknowledged')?'acknowledged':'pending')}><i/>{triggerStatus==='Acknowledged'||triggerStatus==='In Progress'||messageStatus==='Acknowledged'?'NURSE ACKNOWLEDGED — PURPLE INDICATOR':triggerStatus==='Assigned'?'ALERT RECEIVED BY NURSE — AWAITING ACKNOWLEDGEMENT':'WAITING FOR NURSE ACKNOWLEDGEMENT'}</div>
       </section>
       <section className="iot-flow panel">
         <div className="iot-section-label">LIVE RESPONSE JOURNEY</div>
