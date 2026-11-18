@@ -50,7 +50,8 @@ const initials=name=>name.split(' ').map(x=>x[0]).join('').slice(0,2)
 const tagTone=v=>/critical|delay|fail|fault/i.test(v)?'red':/high|moderate|warn|monitor|maint/i.test(v)?'amber':'green'
 
 
-const API_BASE=(import.meta.env.VITE_API_URL||(import.meta.env.DEV?'http://localhost:8000':'https://care-compass-fastapi.onrender.com')).replace(/\/$/,'')
+const API_HOST=typeof window!=='undefined'?window.location.hostname:'localhost'
+const API_BASE=(import.meta.env.VITE_API_URL||(import.meta.env.DEV?`http://${API_HOST}:8000`:'https://care-compass-fastapi.onrender.com')).replace(/\/$/,'')
 async function loadDatabase(){
  const names=['hospitals','patients','nurses','medical_devices','logistics_shipments','resilience_alerts','distribution_centers','suppliers','inventory','therapy_episodes','therapy_sessions','nurse_patient_assignment','device_patient_assignment','patient_supply_plan','shipment_patient_allocation','shipment_events','technician_master','device_alarms','service_tickets','work_orders','intervention_cases','recall_cases','firmware_campaigns','firmware_execution','audit_log','ticket_status_history','risk_register']
  const pairs=await Promise.all(names.map(async n=>{const r=await fetch(`${API_BASE}/api/data/${n}?limit=50000`);if(!r.ok)throw Error(`Could not load ${n}: ${r.status}`);return [n,(await r.json()).rows||[]]}))
@@ -75,7 +76,8 @@ function IoTDevicePage(){
       if(!live)return;
       const nurses=j.nurses||[], assignments=j.assignments||[];
       setLiveNurses(nurses);setLiveAssignments(assignments);
-      setPatientId(assignments[0]?.patient_id||'');
+      const requestedPatient=new URLSearchParams(window.location.search).get('patient_id');
+      setPatientId(assignments.some(p=>p.patient_id===requestedPatient)?requestedPatient:(assignments[0]?.patient_id||''));
       setNurseId(assignments[0]?.nurse_id||'');
       setConfigError('');
     }).catch(e=>{if(live)setConfigError(e.message)}).finally(()=>{if(live)setConfigLoading(false)});
@@ -227,6 +229,15 @@ function IoTDevicePage(){
           <div className="iot-payload-note"><Activity size={16}/><span>On trigger, FastAPI writes the patient risk, nurse intervention and device audit event in one database transaction.</span></div>
         </section>
       </div>
+      <section className="iot-qr-panel panel">
+        <div className="iot-section-label">SCAN TO OPEN ON ANOTHER DEVICE</div>
+        <h2>Patient mobile access</h2>
+        <p className="iot-voice-help">Scan this code with a phone camera. It opens this same patient trigger page with the selected patient preloaded. The phone and nurse console use the same Care Compass API and PostgreSQL records.</p>
+        {patientId ? <div className="iot-qr-content">
+          <img className="iot-qr-image" alt="QR code to open the patient emergency support page" src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(window.location.origin+'/patient?patient_id='+patientId)}`}/>
+          <div><b>{patient?.first_name} {patient?.last_name}</b><small>{patientId}</small><a href={window.location.origin+'/patient?patient_id='+encodeURIComponent(patientId)} target="_blank" rel="noreferrer">Open patient page ↗</a><small>For local testing, connect both devices to the same Wi-Fi and open this app using your computer's LAN IP. For access from anywhere, use the deployed HTTPS website.</small></div>
+        </div> : <p className="iot-voice-warning">Select a patient with an active nurse assignment to generate the QR code.</p>}
+      </section>
       <section className="iot-voice-panel panel">
         <div className="iot-section-label">PATIENT-TO-NURSE COMMUNICATION</div>
         <h2>Speak to your nurse</h2>
