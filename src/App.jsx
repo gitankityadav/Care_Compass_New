@@ -8,7 +8,7 @@ import Login from './components/Login'
 import workbook from './data/workbook-sample.json'
 import './styles/app.css'
 
-const modules=[['twin','Leadership Dashboard',Activity],['patients','Patient Command Center',Users],['staff','Nurse Mobility',Stethoscope],['leave','Leave & Coverage',CalendarDays],['logistics','Logistics Tower',Truck],['automation','Automation Center',RefreshCw],['ops','Service Ops',Wrench],['resilience','Resilience Center',ShieldCheck],['trigger','IoT Device Simulator',Cpu]]
+const modules=[['twin','Leadership Dashboard',Activity],['patients','Patient Command Center',Users],['staff','Nurse Mobility',Stethoscope],['leave','Leave & Coverage',CalendarDays],['logistics','Logistics Tower',Truck],['automation','Automation Center',RefreshCw],['ops','Service Ops',Wrench],['resilience','Resilience Center',ShieldCheck],['trigger','Patient Emergency Support',Cpu]]
 const shortLabel={twin:'Twin',patients:'Patients',staff:'Nurse Mobility',leave:'Leave',logistics:'Logistics',automation:'Automation',ops:'Ops',resilience:'Resilience',trigger:'IoT Device'}
 const hospitalById=Object.fromEntries(workbook.hospitals.map(h=>[h.hospital_id,h]))
 const nurseById=Object.fromEntries(workbook.nurses.map(n=>[n.nurse_id,n]))
@@ -37,7 +37,7 @@ const initial={
 
 const roles=['Administrator','Doctor','Nurse','Logistics Manager','Technician','Auditor','Clinical Dispatcher']
 const access={Administrator:['twin','patients','logistics','automation','ops','staff','resilience'],Doctor:['twin','patients','resilience'],Nurse:['patients','staff','leave','automation'],'Logistics Manager':['logistics','twin','resilience','automation'],Technician:['ops','resilience'],Auditor:['twin','patients','logistics','automation','ops','staff','resilience'],'IoT Device Operator':['trigger']}
-const descriptions={automation:'See automatic checks, issues that need attention and the next recommended step.',patients:'Review patient risk, care pathways, assignments and intervention status.',logistics:'Monitor supply movements, destination facilities and shipment exceptions.',ops:'Track medical device condition, maintenance and biomedical service dispatch.',staff:'See each patient’s complete nursing team, shared assignments and workload.',leave:'Plan nurse leave, nominate cover and track colleague approval.',resilience:'Manage operational threats, facility disruptions and response status.',trigger:'Simulate a bedside IoT device event and send an instant alert to the assigned nurse.'}
+const descriptions={automation:'See automatic checks, issues that need attention and the next recommended step.',patients:'Review patient risk, care pathways, assignments and intervention status.',logistics:'Monitor supply movements, destination facilities and shipment exceptions.',ops:'Track medical device condition, maintenance and biomedical service dispatch.',staff:'See each patient’s complete nursing team, shared assignments and workload.',leave:'Plan nurse leave, nominate cover and track colleague approval.',resilience:'Manage operational threats, facility disruptions and response status.',trigger:'Patient-facing emergency support simulator that sends an alert to the patient’s assigned nurse.'}
 const scenarios=[
   ['Storm disruption logistics response','3 critical shipments halted · Regional supply continuity','HIGH PRI','logistics',CloudLightning,'rose'],
   ['Missed or delayed patient therapy','Identify affected patients and nearest available nurse','CLINICAL','patients',Syringe,'cyan'],
@@ -66,7 +66,7 @@ function IoTDevicePage(){
   const [configLoading,setConfigLoading]=useState(true);
   const [configError,setConfigError]=useState('');
   const [patientId,setPatientId]=useState('');
-  const assignedPatients=liveAssignments.filter(a=>a.nurse_id===nurseId);
+  const assignedPatients=liveAssignments;
   useEffect(()=>{
     let live=true;
     fetch(`${API_BASE}/api/iot/config`).then(async r=>{
@@ -75,14 +75,14 @@ function IoTDevicePage(){
       if(!live)return;
       const nurses=j.nurses||[], assignments=j.assignments||[];
       setLiveNurses(nurses);setLiveAssignments(assignments);
-      const preferred=nurses.some(n=>n.nurse_id==='NUR00017')?'NUR00017':(nurses[0]?.nurse_id||'');
-      setNurseId(preferred);
-      setPatientId(assignments.find(a=>a.nurse_id===preferred)?.patient_id||'');
+      setPatientId(assignments[0]?.patient_id||'');
+      setNurseId(assignments[0]?.nurse_id||'');
       setConfigError('');
     }).catch(e=>{if(live)setConfigError(e.message)}).finally(()=>{if(live)setConfigLoading(false)});
     return()=>{live=false};
   },[]);
-  useEffect(()=>{if(!assignedPatients.some(p=>p.patient_id===patientId))setPatientId(assignedPatients[0]?.patient_id||'')},[nurseId,liveAssignments]);
+  useEffect(()=>{const assignment=liveAssignments.find(p=>p.patient_id===patientId);if(assignment)setNurseId(assignment.nurse_id||'')},[patientId,liveAssignments]);
+  useEffect(()=>{if(!assignedPatients.some(p=>p.patient_id===patientId))setPatientId(assignedPatients[0]?.patient_id||'')},[liveAssignments]);
   const [severity,setSeverity]=useState('Critical');
   const [eventType,setEventType]=useState('Abnormal heart-rate threshold');
   const [observation,setObservation]=useState('Heart rate has exceeded the configured safety threshold. Immediate nurse assessment requested.');
@@ -197,8 +197,8 @@ function IoTDevicePage(){
     </header>
     <main className="iot-standalone-main">
       <div className="iot-kicker">CONNECTED MEDICAL DEVICE / ICU-014</div>
-      <h1>Bedside IoT Emergency Trigger</h1>
-      <p className="iot-intro">A bedside patient monitor is connected to the Care Compass central command center. Press the physical alert control to transmit a patient safety event directly to the assigned nurse.</p>
+      <h1>Patient Emergency Support</h1>
+      <p className="iot-intro">This patient-facing simulator lets a patient request urgent nurse assistance. It records the alert through Care Compass; it is a demonstration and is not connected to a physical bedside device or emergency service.</p>
       <div className="iot-device-layout">
         <section className="iot-device-visual panel">
           <div className="iot-device-top"><span className={'iot-led '+(messageStatus==='Acknowledged'?'acknowledged':'')}/><b>{messageStatus==='Acknowledged'?'NURSE ACKNOWLEDGED':'DEVICE ONLINE'}</b><small>CC-IOT-ICU-014</small></div>
@@ -206,7 +206,7 @@ function IoTDevicePage(){
           <div className="iot-device-caption"><b>BEDSIDЕ PATIENT MONITOR</b><span>Signal: Connected · Channel: Clinical Safety</span></div>
           <button className="iot-red-trigger" onClick={send} disabled={apiState!=='connected'||sending||!patientId}>
             <span className="trigger-ring"><span/></span>
-            <b>{sending?'TRANSMITTING…':'PRESS TO TRIGGER ALERT'}</b>
+            <b>{sending?'SENDING REQUEST…':'REQUEST NURSE ASSISTANCE'}</b>
             <small>{apiState==='connected'?'Send event to '+(workbook.nurses.find(n=>n.nurse_id===nurseId)?.full_name||'assigned nurse'):'Waiting for central command connection'}</small>
           </button>
           {lastEvent&&<div className="iot-transmitted"><b><CheckCircle2 size={17}/> {lastEvent.deduplicated?'DUPLICATE SUPPRESSED':'EVENT TRANSMITTED'}</b><span>{lastEvent.eventId} · {lastEvent.at}</span><small>{lastEvent.deduplicated?'This patient/device alert was already recorded in the last 15 minutes. No duplicate was created.':'Risk '+lastEvent.riskId+' and intervention '+lastEvent.interventionId+' committed for '+lastEvent.patient+'.'}</small></div>}
@@ -215,12 +215,12 @@ function IoTDevicePage(){
         <section className="iot-event-config panel">
           <div className="iot-section-label">EVENT CONFIGURATION</div>
           <h2>Patient & telemetry</h2>
-          <label>Assigned nurse</label><select value={nurseId} onChange={e=>setNurseId(e.target.value)} disabled={configLoading||!liveNurses.length}>{liveNurses.map(n=><option key={n.nurse_id} value={n.nurse_id}>{n.full_name} · {n.nurse_id}</option>)}</select>
-          <label>Patient connected to this monitor</label>
+          <label>Assigned nurse</label><div className="iot-assigned-nurse">{liveNurses.find(n=>n.nurse_id===nurseId)?.full_name||nurseId||'No nurse assigned'} <small>Automatically determined from the selected patient’s active assignment</small></div>
+          <label>Select patient</label>
           <select value={patientId} onChange={e=>setPatientId(e.target.value)} disabled={configLoading||!assignedPatients.length}>{assignedPatients.map(p=><option key={p.patient_id} value={p.patient_id}>{p.first_name} {p.last_name} · {p.patient_id}</option>)}</select>
           {configLoading&&<small>Loading live PostgreSQL nurse assignments…</small>}
           {configError&&<p className="iot-voice-warning">{configError}</p>}
-          {!configLoading&&!configError&&!assignedPatients.length&&<p className="iot-voice-warning">No active patient assignments are available for this nurse.</p>}
+          {!configLoading&&!configError&&!assignedPatients.length&&<p className="iot-voice-warning">No active nurse assignment found for the available patients.</p>}
           <label>Device event</label><select value={eventType} onChange={e=>setEventType(e.target.value)}><option>Abnormal heart-rate threshold</option><option>Oxygen saturation below threshold</option><option>Blood pressure outside configured range</option><option>Patient deterioration detected</option><option>Missed critical observation</option></select>
           <label>Alert severity</label><select value={severity} onChange={e=>setSeverity(e.target.value)}><option>Critical</option><option>High</option></select>
           <label>Telemetry payload / observation</label><textarea rows="4" value={observation} onChange={e=>setObservation(e.target.value)}/>
@@ -448,7 +448,7 @@ function App(){
     finally{setScenarioBusy('')}
   }
 
-  if(window.location.pathname==='/iot-device')return <IoTDevicePage/>
+  if(['/patient','/iot-device'].includes(window.location.pathname))return <IoTDevicePage/>
 
   const allowed=access[user?.role||role]||access.Administrator
   const current=modules.find(m=>m[0]===tab)||modules[0]
